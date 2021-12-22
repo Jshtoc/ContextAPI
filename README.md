@@ -1,70 +1,141 @@
-# Getting Started with Create React App
+# Context API
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+**context를 이용하면 단계마다 일일이 props를 넘겨주지 않고도 컴포넌트 트리 전체에 데이터를 제공할 수 있습니다.**
 
-## Available Scripts
+일반적인 React 애플리케이션에서 데이터는 위에서 아래로 (즉, 부모로부터 자식에게) props를 통해 전달되지만,  
+애플리케이션 안의 여러 컴포넌트들에 전해줘야 하는 props의 경우  
+(예를 들면 선호 로케일, UI 테마) 이 과정이 번거로울 수 있습니다.  
+context를 이용하면, 트리 단계마다 명시적으로 props를 넘겨주지 않아도 많은 컴포넌트가 이러한 값을 공유하도록 할 수 있습니다.
 
-In the project directory, you can run:
+## 하위 컴포넌트 전체에 데이터를 공유하는 법
 
-### `npm start`
+- 데이터를 Set 하는 놈
+  - 가장 상위 컴포넌트 => 프로바이더
+- 데이터를 Get 하는 놈
+  - 모든 하위 컴포넌트에서 접근 가능
+    - 컨슈머로 하는 방법
+    - 클래스 컴포넌트의 this.context 로 하는 방법
+    - 펑셔널 컴포넌트의 useContext 로 하는 방법
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## 데이터를 Set 하기
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+1. 일단 컨텍스트를 생성한다.
+2. 컨텍스트.프로바이더를 사용한다.
+3. value 를 사용
 
-### `npm test`
+src/contexts 폴더 생성 후 안에 PersonContext.js 생성
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```javascript
+import React from "react";
 
-### `npm run build`
+const PersonContext = React.createContext();
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+export default PersonContext;
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+src/index.js 수정
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```javascript
+import PersonContext from "./contexts/PersonContext";
 
-### `npm run eject`
+const persons = [
+  { id: 0, name: "seung-ho", age: 26 },
+  { id: 1, name: "Seck", age: 22 },
+];
+// 전역에서 사용가능
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+ReactDOM.render(
+  <React.StrictMode>
+    <PersonContext.Provider value={persons}>
+      <App />
+    </PersonContext.Provider>
+  </React.StrictMode>,
+  document.getElementById("root")
+);
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+---
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## 데이터를 Get 하기(1) - Consumer
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+1. 컨텍스트를 가져온다.
+2. 컨텍스트.컨슈머를 사용한다.
+3. value 를 사용.
 
-## Learn More
+src/components 폴더안 컴포넌트 생성
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```javascript
+import PersonContext from "../contexts/PersonContext";
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+export default function Example1() {
+  return (
+    <PersonContext.Consumer>
+      {/* PersonContext안에 있는 value랑 같은값이므로 persons라 해도 동일. */}
+      {(persons) => (
+        <ul>
+          {persons.map((person) => (
+            <li>{person.name}</li>
+          ))}
+        </ul>
+      )}
+    </PersonContext.Consumer>
+  );
+}
+// function 컴포넌트와 class 컴포넌트에서 범용적으로 사용된다.
+```
 
-### Code Splitting
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## 데이터를 Get 하기 (2) - class
 
-### Analyzing the Bundle Size
+1. static contextType에 컨텍스트를 설정한다.
+2. this.context => value 이다.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+```javascript
+import React from "react";
+import PersonContext from "../contexts/PersonContext";
 
-### Making a Progressive Web App
+export default class Example2 extends React.Component {
+  // static contextType = PersonContext;
+  // 여러개를 사용할 수 없다는게 단점.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+  render() {
+    const persons = this.context;
+    return (
+      <ul>
+        {persons.map((person) => (
+          <li>{person.name}</li>
+        ))}
+      </ul>
+    );
+  }
+}
 
-### Advanced Configuration
+Example2.contextType = PersonContext;
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+---
 
-### Deployment
+## 데이터를 Get 하기 (3) - functional
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+1. useContext 로 컨텍스트를 인자로 호출한다.
+2. useContext 의 리턴이 value이다.
 
-### `npm run build` fails to minify
+```javascript
+import { useContext } from "react";
+import PersonContext from "../contexts/PersonContext";
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+export default function Example3() {
+  const persons = useContext(PersonContext);
+  //  훅을 사용
+  return (
+    <ul>
+      {persons.map((person) => (
+        <li>{person.name}</li>
+      ))}
+    </ul>
+  );
+}
+
+// 많이 쓰이는 방식
+```
